@@ -12,4 +12,13 @@ Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');
 
-require __DIR__.'/auth.php';
+Route::middleware('role:manager')->group(function () {
+    // Only managers can access these routes
+});
+
+// Or for multiple roles
+Route::middleware('role:manager|admin')->group(function () {
+    // Managers or admins can access these routes
+});
+
+require __DIR__ . '/auth.php';
