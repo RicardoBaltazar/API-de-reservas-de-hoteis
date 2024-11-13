@@ -20,7 +20,6 @@ class RegistrationTest extends TestCase
     {
         parent::setUp();
 
-        // Create the roles before running tests
         Role::create(['name' => 'user']);
         Role::create(['name' => 'manager']);
         Role::create(['name' => 'admin']);
@@ -35,53 +34,33 @@ class RegistrationTest extends TestCase
             ->assertSeeVolt('pages.auth.register');
     }
 
-    // public function test_new_users_can_register(): void
-    // {
-    //     $component = Volt::test('pages.auth.register')
-    //         ->set('name', 'Test User')
-    //         ->set('email', 'test@example.com')
-    //         ->set('password', 'password')
-    //         ->set('password_confirmation', 'password')
-    //         ->set('role', 'user,mananger,admin');
-
-    //     $component->call('register');
-
-    //     $component->assertRedirect(route('dashboard', absolute: false));
-    //     // $component->assertRedirect('/dashboard');
-
-    //     $this->assertAuthenticated();
-    // }
-
-    public function test_can_register_user_with_valid_data(): void
+    public function test_new_user_can_register(): void
     {
-        $component = Volt::test('pages.auth.register');
+        Event::fake([Registered::class]);
 
-        $userData = [
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
-            'role' => 'user'
-        ];
-
-        foreach ($userData as $field => $value) {
-            $component->set($field, $value);
-        }
+        $component = Volt::test('pages.auth.register')
+            ->set('name', 'Test User')
+            ->set('email', 'test@example.com')
+            ->set('password', 'password123')
+            ->set('password_confirmation', 'password123')
+            ->set('role', 'user');
 
         $component->call('register');
 
-        // Assert user was created in database
         $this->assertDatabaseHas('users', [
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
 
-        // Assert role was assigned
         $user = User::where('email', 'test@example.com')->first();
+
+        $this->assertTrue(Hash::check('password123', $user->password));
+
         $this->assertTrue($user->hasRole('user'));
 
-        // Assert user is authenticated
-        $this->assertTrue(Auth::check());
+        Event::assertDispatched(Registered::class);
+
+        $component->assertRedirect(route('dashboard', absolute: false));
     }
 
     public function test_cannot_register_with_invalid_data(): void
